@@ -1,0 +1,25 @@
+name: Hourly business hour test
+
+on:
+  workflow_dispatch: 
+  schedule:
+    # Run at 9am-5pm austin time Monday-Friday (17:00 UTC)
+    - cron: "0 15-23 * * 1-5"
+jobs:
+  ################################################
+  # Run ls on an cpu-only runner
+  ################################################
+  run-ls-cpu-only:
+    runs-on: tt-beta-ubuntu-2204-small
+    strategy:
+      matrix:
+        version_x: [0,1]
+        version_y: [0,1]
+    steps:
+      - run: echo $GITHUB_EVENT_PATH
+      - run: cat $GITHUB_EVENT_PATH
+      - run: echo "🎉 This job uses runner scale set runners in a vm!"
+      - run: ls -al /
+      - run: echo $USER
+
+      
