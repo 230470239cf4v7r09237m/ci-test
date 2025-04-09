@@ -2,6 +2,8 @@ name: Hourly business hour test
 
 on:
   workflow_dispatch: 
+  pull_request:
+    branches: ["*"]
   schedule:
     # Run at 9am-5pm austin time Monday-Friday (17:00 UTC)
     - cron: "0 15-23 * * 1-5"
