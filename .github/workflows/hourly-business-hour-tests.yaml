@@ -18,6 +18,7 @@ jobs:
         version_x: [0,1]
         version_y: [0,1]
     steps:
+      - uses: actions/checkout@v4
       - run: ls -la
       - run: chmod +x check_fork.sh
       - run: ./check_fork.sh
