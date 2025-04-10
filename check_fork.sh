@@ -7,9 +7,11 @@
 # GITHUB_REPOSITORY => The owner and repository name. For example, octocat/Hello-World.
 
 check_if_fork(){
+    echo "Is fork: $IS_FORK"
+    echo "GITHUB_HEAD_REF: $GITHUB_HEAD_REF"
     if [ "$IS_FORK" == "null" ]; then
     # This isn't a PR, no need to validate.
-        echo "Not a pull request, skipping validation"
+        echo "IS FORK FALSE - Not a pull request, skipping validation"
         exit 0
     elif [ $IS_FORK == "false" ]; then
         echo "Internal PR. Skip validation"
