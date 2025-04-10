@@ -7,11 +7,9 @@
 # GITHUB_REPOSITORY => The owner and repository name. For example, octocat/Hello-World.
 
 check_if_fork(){
-    echo "Is fork: $IS_FORK"
-    echo "GITHUB_HEAD_REF: $GITHUB_HEAD_REF"
     if [ "$IS_FORK" == "null" ]; then
-    # This isn't a PR, no need to validate.
-        echo "IS FORK FALSE - Not a pull request, skipping validation"
+        # This isn't a PR, no need to validate.
+        echo "Not a pull request, skipping validation"
         exit 0
     elif [ $IS_FORK == "false" ]; then
         echo "Internal PR. Skip validation"
@@ -33,9 +31,7 @@ clone_repo_with_reference () {
     fi
     BRANCH=$1
     OUTPUT_PATH=$2
-
-    git clone clone_url --branch $BRANCH --single-branch --reference=$LOCAL_REPO_STORAGE_PATH/$GIT_REPO_FULL_NAME $OUTPUT_PATH/$GIT_REPO_FULL_NAME
-    git clone $GITHUB_SERVER_URL/$GIT_REPO_FULL_NAME.git --branch $BRANCH --single-branch --reference=$LOCAL_REPO_STORAGE_PATH/$GIT_REPO_FULL_NAME $OUTPUT_PATH/$GIT_REPO_FULL_NAME
+    git clone $GITHUB_SERVER_URL/$GIT_REPO_FULL_NAME.git --quiet --branch $BRANCH --single-branch --reference=$LOCAL_REPO_STORAGE_PATH/$GIT_REPO_FULL_NAME $OUTPUT_PATH/$GIT_REPO_FULL_NAME
 }
 
 
@@ -49,11 +45,11 @@ fetch_workflow() {
     BRANCH=$1
     OUTPUT_PATH=$2
     cd $OUTPUT_PATH/$GIT_REPO_FULL_NAME
-    git init
+    git init --quiet
     git remote add -f origin $GITHUB_SERVER_URL/$GIT_REPO_FULL_NAME.git
     git config core.sparseCheckout true
     echo ".github" >> .git/info/sparse-checkout # Add to only pull the '.github' directory
-    git pull origin $BRANCH
+    git pull origin $BRANCH --quiet
     cd -
 }
 
