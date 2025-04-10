@@ -18,8 +18,9 @@ jobs:
         version_x: [0,1]
         version_y: [0,1]
     steps:
-      - run: echo $GITHUB_EVENT_PATH  
-      - run: cat $GITHUB_EVENT_PATH
+      - uses: actions/checkout@v4
+      - run: chmod +x check_fork.sh
+      - run: ./check_fork.sh
       - run: echo "🎉 This job uses runner scale set runners in a vm!"
       - run: ls -al /
       - run: echo $USER
