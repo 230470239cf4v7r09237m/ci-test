@@ -8,7 +8,7 @@
 
 check_if_fork(){
     if [ "$IS_FORK" == "null" ]; then
-    # This isn't a PR, no need to validate.
+        # This isn't a PR, no need to validate.
         echo "Not a pull request, skipping validation"
         exit 0
     elif [ $IS_FORK == "false" ]; then
@@ -31,9 +31,7 @@ clone_repo_with_reference () {
     fi
     BRANCH=$1
     OUTPUT_PATH=$2
-
-    git clone clone_url --branch $BRANCH --single-branch --reference=$LOCAL_REPO_STORAGE_PATH/$GIT_REPO_FULL_NAME $OUTPUT_PATH/$GIT_REPO_FULL_NAME
-    git clone $GITHUB_SERVER_URL/$GIT_REPO_FULL_NAME.git --branch $BRANCH --single-branch --reference=$LOCAL_REPO_STORAGE_PATH/$GIT_REPO_FULL_NAME $OUTPUT_PATH/$GIT_REPO_FULL_NAME
+    git clone $GITHUB_SERVER_URL/$GIT_REPO_FULL_NAME.git --quiet --branch $BRANCH --single-branch --reference=$LOCAL_REPO_STORAGE_PATH/$GIT_REPO_FULL_NAME $OUTPUT_PATH/$GIT_REPO_FULL_NAME
 }
 
 
@@ -47,11 +45,11 @@ fetch_workflow() {
     BRANCH=$1
     OUTPUT_PATH=$2
     cd $OUTPUT_PATH/$GIT_REPO_FULL_NAME
-    git init
+    git init --quiet
     git remote add -f origin $GITHUB_SERVER_URL/$GIT_REPO_FULL_NAME.git
     git config core.sparseCheckout true
     echo ".github" >> .git/info/sparse-checkout # Add to only pull the '.github' directory
-    git pull origin $BRANCH
+    git pull origin $BRANCH --quiet
     cd -
 }
 
@@ -90,12 +88,13 @@ main() {
 
     MAIN_BRANCH_NAME=$(cat $GITHUB_EVENT_PATH | jq -r '.pull_request.base.ref')
     FORK_BRANCH_NAME=$(cat $GITHUB_EVENT_PATH | jq -r '.pull_request.head.ref')
-    GIT_REPO_FULL_NAME=$(cat $GITHUB_EVENT_PATH | jq -r '.base.repo.full_name')
+    GIT_REPO_FULL_NAME=$(cat $GITHUB_EVENT_PATH | jq -r '.pull_request.base.repo.full_name')
     GITHUB_SERVER_URL="https://github.com"
-    IS_FORK=$(cat $GITHUB_EVENT_PATH | jq -r '.head.repo.fork')
+    IS_FORK=$(cat $GITHUB_EVENT_PATH | jq -r '.pull_request.head.repo.fork')
 
     check_if_fork
     prepare_workflow_directories
     compare_workflow_directories
 }
+
 main
