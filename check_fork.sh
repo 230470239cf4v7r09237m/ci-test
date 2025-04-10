@@ -98,3 +98,4 @@ main() {
     prepare_workflow_directories
     compare_workflow_directories
 }
+main
