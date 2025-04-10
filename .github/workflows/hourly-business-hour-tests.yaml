@@ -21,6 +21,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: chmod +x check_fork.sh
       - run: ./check_fork.sh
+      - run: cat $GITHUB_EVENT_PATH
       - run: echo "🎉 This job uses runner scale set runners in a vm!"
       - run: ls -al /
       - run: echo $USER
