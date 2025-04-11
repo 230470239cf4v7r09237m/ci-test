@@ -75,7 +75,7 @@ compare_workflow_directories() {
     # Compare the two directories
     echo "[Info] Comparing the two directories"
     # Should we add `--quiet` to this?
-    git diff --name-only --exit-code $MAIN_WORKFLOW_CLONE_PATH/$GIT_REPO_FULL_NAME/.github $NEW_WORKFLOW_CLONE_PATH/$GIT_REPO_FULL_NAME/.github
+    git diff --name-only --exit-code $MAIN_WORKFLOW_CLONE_PATH/$SOURCE_REPO_FULL_NAME/.github $NEW_WORKFLOW_CLONE_PATH/$FORK_REPO_FULL_NAME/.github
     if [[ $? -ne 0 ]]; then
         echo "[Error] Workflow files have changed, exiting with error code 1"
         exit 1
