@@ -45,6 +45,7 @@ fetch_workflow() {
     GIT_REPO_FULL_NAME=$1
     BRANCH=$2
     OUTPUT_PATH=$3
+    mkdir -p $OUTPUT_PATH/$GIT_REPO_FULL_NAME
     cd $OUTPUT_PATH/$GIT_REPO_FULL_NAME
     git init --quiet
     git remote add -f origin $GITHUB_SERVER_URL/$GIT_REPO_FULL_NAME.git
