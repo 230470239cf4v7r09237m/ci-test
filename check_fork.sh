@@ -90,7 +90,7 @@ main() {
     MAIN_BRANCH_NAME=$(cat $GITHUB_EVENT_PATH | jq -r '.pull_request.base.ref')
     FORK_BRANCH_NAME=$(cat $GITHUB_EVENT_PATH | jq -r '.pull_request.head.ref')
     SOURCE_REPO_FULL_NAME=$(cat $GITHUB_EVENT_PATH | jq -r '.pull_request.base.repo.full_name')
-    FORK_REPO_FULL_NAME=$(cat $GITHUB_EVENT_PATH | jq -r '.head.repo.full_name')
+    FORK_REPO_FULL_NAME=$(cat $GITHUB_EVENT_PATH | jq -r '.pull_request.head.repo.full_name')
     GITHUB_SERVER_URL="https://github.com"
     IS_FORK=$(cat $GITHUB_EVENT_PATH | jq -r '.pull_request.head.repo.fork')
 
