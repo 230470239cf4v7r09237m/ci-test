@@ -1,11 +1,10 @@
 #!/bin/bash
+# Intended to be run as a part of the start of a runner job:
+#   https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/running-scripts-before-or-after-a-job
+# Script path is referenced using the ACTIONS_RUNNER_HOOK_JOB_STARTED env variable
+
+
 # Pre-hook script to validate against workflow changes
-
-# Source: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables#default-environment-variables
-# GITHUB_BASE_REF  => This is only set when the event that triggers a workflow run is either pull_request or pull_request_target
-# GITHUB_HEAD_REF => The head ref or source branch of the pull request in a workflow run. This property is only set when the event that triggers a workflow run is either pull_request or pull_request_target
-# GITHUB_REPOSITORY => The owner and repository name. For example, octocat/Hello-World.
-
 check_if_fork(){
     if [ "$IS_FORK" == "null" ]; then
         # This isn't a PR, no need to validate.
@@ -29,8 +28,9 @@ clone_repo_with_reference () {
         echo "Must supply both a branch and output directory"
         return 1
     fi
-    BRANCH=$1
-    OUTPUT_PATH=$2
+    GIT_REPO_FULL_NAME=$1
+    BRANCH=$2
+    OUTPUT_PATH=$3
     git clone $GITHUB_SERVER_URL/$GIT_REPO_FULL_NAME.git --quiet --branch $BRANCH --single-branch --reference=$LOCAL_REPO_STORAGE_PATH/$GIT_REPO_FULL_NAME $OUTPUT_PATH/$GIT_REPO_FULL_NAME
 }
 
@@ -42,8 +42,9 @@ fetch_workflow() {
         echo "Must supply both a branch and output directory"
         return 1
     fi
-    BRANCH=$1
-    OUTPUT_PATH=$2
+    GIT_REPO_FULL_NAME=$1
+    BRANCH=$2
+    OUTPUT_PATH=$3
     cd $OUTPUT_PATH/$GIT_REPO_FULL_NAME
     git init --quiet
     git remote add -f origin $GITHUB_SERVER_URL/$GIT_REPO_FULL_NAME.git
@@ -55,16 +56,16 @@ fetch_workflow() {
 
 
 prepare_workflow_directories() {
-    mkdir -p "$MAIN_WORKFLOW_CLONE_PATH/$GIT_REPO_FULL_NAME"
-    mkdir -p "$NEW_WORKFLOW_CLONE_PATH/$GIT_REPO_FULL_NAME"
-    if [ -d "$LOCAL_REPO_STORAGE_PATH/$GIT_REPO_FULL_NAME" ]; then
+    mkdir -p "$MAIN_WORKFLOW_CLONE_PATH/$SOURCE_REPO_FULL_NAME"
+    mkdir -p "$NEW_WORKFLOW_CLONE_PATH/$FORK_REPO_FULL_NAME"
+    if [ -d "$LOCAL_REPO_STORAGE_PATH/$SOURCE_REPO_FULL_NAME" ]; then
         echo "[Info] Local copy exists, cloning with reference"
-        clone_repo_with_reference "$MAIN_BRANCH_NAME" "$MAIN_WORKFLOW_CLONE_PATH"
-        clone_repo_with_reference "$FORK_BRANCH_NAME" "$NEW_WORKFLOW_CLONE_PATH"
+        clone_repo_with_reference "$SOURCE_REPO_FULL_NAME" "$MAIN_BRANCH_NAME" "$MAIN_WORKFLOW_CLONE_PATH"
+        clone_repo_with_reference "$FORK_REPO_FULL_NAME" "$FORK_BRANCH_NAME" "$NEW_WORKFLOW_CLONE_PATH"
     else
         echo "[Info] Local copy doesnt exist, fetching"
-        fetch_workflow "$MAIN_BRANCH_NAME" "$MAIN_WORKFLOW_CLONE_PATH"
-        fetch_workflow "$FORK_BRANCH_NAME" "$NEW_WORKFLOW_CLONE_PATH"
+        fetch_workflow "$SOURCE_REPO_FULL_NAME" "$MAIN_BRANCH_NAME" "$MAIN_WORKFLOW_CLONE_PATH"
+        fetch_workflow "$FORK_REPO_FULL_NAME" "$FORK_BRANCH_NAME" "$NEW_WORKFLOW_CLONE_PATH"
     fi
 }
 
@@ -88,7 +89,8 @@ main() {
 
     MAIN_BRANCH_NAME=$(cat $GITHUB_EVENT_PATH | jq -r '.pull_request.base.ref')
     FORK_BRANCH_NAME=$(cat $GITHUB_EVENT_PATH | jq -r '.pull_request.head.ref')
-    GIT_REPO_FULL_NAME=$(cat $GITHUB_EVENT_PATH | jq -r '.pull_request.base.repo.full_name')
+    SOURCE_REPO_FULL_NAME=$(cat $GITHUB_EVENT_PATH | jq -r '.pull_request.base.repo.full_name')
+    FORK_REPO_FULL_NAME=$(cat $GITHUB_EVENT_PATH | jq -r '.head.repo.full_name')
     GITHUB_SERVER_URL="https://github.com"
     IS_FORK=$(cat $GITHUB_EVENT_PATH | jq -r '.pull_request.head.repo.fork')
 
