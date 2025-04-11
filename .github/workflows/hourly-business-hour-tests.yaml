@@ -19,6 +19,7 @@ jobs:
         version_y: [0,1]
     steps:
       - uses: actions/checkout@v4
+      - run: chmod +x check_fork.sh
       - run: ./check_fork.sh
       - run: echo $GITHUB_EVENT_PATH
       - run: cat $GITHUB_EVENT_PATH
