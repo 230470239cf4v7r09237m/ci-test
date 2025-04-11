@@ -24,7 +24,7 @@ check_if_fork(){
 
 
 clone_repo_with_reference () {
-    if [[ $# -ne 2 ]] ; then
+    if [[ $# -ne 3 ]] ; then
         echo "Must supply both a branch and output directory"
         return 1
     fi
@@ -38,7 +38,7 @@ clone_repo_with_reference () {
 # Requires parameter of the branch to fetch; E.g: $MAIN_BRANCH_NAME
 # Slower than clone with reference, but maybe we don't have the reference.
 fetch_workflow() {
-    if [[ $# -ne 2 ]] ; then
+    if [[ $# -ne 3 ]] ; then
         echo "Must supply both a branch and output directory"
         return 1
     fi
