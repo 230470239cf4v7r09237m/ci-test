@@ -12,16 +12,16 @@ jobs:
   # Run ls on an cpu-only runner
   ################################################
   run-ls-cpu-only:
-    runs-on: tt-beta-ubuntu-2204-small
+    runs-on: tt-beta-ubuntu-2204-mnijjar
     strategy:
       matrix:
         version_x: [0,1]
         version_y: [0,1]
     steps:
-      - run: echo $GITHUB_EVENT_PATH
+      - uses: actions/checkout@v4
+      - run: chmod +x check_fork.sh
+      - run: ./check_fork.sh
       - run: cat $GITHUB_EVENT_PATH
       - run: echo "🎉 This job uses runner scale set runners in a vm!"
       - run: ls -al /
       - run: echo $USER
-
-      
