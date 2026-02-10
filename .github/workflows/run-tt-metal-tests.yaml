@@ -200,6 +200,8 @@ jobs:
         PYTHONPATH: /work
         ARCH_NAME: wormhole_b0
         CCACHE_TEMPDIR: /tmp/ccache
+        CCACHE_DEBUG: 1
+        CCACHE_DEBUGDIR: /tmp/ccache-debug
         TT_METAL_CCACHE_KERNEL_SUPPORT: 1
         TT_METAL_LOGGER_LEVEL: Debug
         TT_METAL_LOGGER_TYPES: BuildKernels
@@ -238,6 +240,8 @@ jobs:
           ls -la /tmp/ccache/inode-cache-64.v2
           echo "ccache temp directory structure:"
           ls -la /tmp/ccache/
+          # Create debug directory
+          mkdir -p /tmp/ccache-debug
 
       - name: 🧬 Checkout Repository
         uses: actions/checkout@v4
@@ -286,3 +290,23 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           ccache -s >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          echo '## CCache Debug - Key Calculation' >> $GITHUB_STEP_SUMMARY
+          echo 'Debug files in /tmp/ccache-debug:' >> $GITHUB_STEP_SUMMARY
+          if [ -d /tmp/ccache-debug ] && [ "$(ls -A /tmp/ccache-debug 2>/dev/null)" ]; then
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            # Show first few debug log files with key calculation info
+            for f in $(find /tmp/ccache-debug -name '*.ccache-log' 2>/dev/null | head -5); do
+              echo "=== $f ===" >> $GITHUB_STEP_SUMMARY
+              cat "$f" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            done
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            
+            echo '### Cache hit/miss decisions - first 20' >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            grep -rE "(cache hit|cache miss|No such file|Storing embedded entry)" /tmp/ccache-debug/ | head -20 >> $GITHUB_STEP_SUMMARY || true
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo 'No debug files found' >> $GITHUB_STEP_SUMMARY
+          fi
