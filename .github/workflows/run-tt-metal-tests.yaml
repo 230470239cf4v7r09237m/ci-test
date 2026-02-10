@@ -227,6 +227,18 @@ jobs:
       - name: Create ccache tmpdir
         run: mkdir -p /tmp/ccache
 
+      - name: Pre-create ccache files for ephemeral runner
+        run: |
+          echo "=== Creating ccache files for ephemeral runner ==="
+          # Create inode cache file that ccache expects
+          touch /tmp/ccache/inode-cache-64.v2
+          # Set appropriate permissions
+          chmod 644 /tmp/ccache/inode-cache-64.v2
+          echo "Created inode cache file:"
+          ls -la /tmp/ccache/inode-cache-64.v2
+          echo "ccache temp directory structure:"
+          ls -la /tmp/ccache/
+
       - name: 🧬 Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -267,3 +279,10 @@ jobs:
         run: |
           echo "Running tests..."
           ${{ inputs.test_command }}
+
+      - name: Publish ccache summary
+        run: |
+          echo '## Test CCache Summary' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          ccache -s >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
