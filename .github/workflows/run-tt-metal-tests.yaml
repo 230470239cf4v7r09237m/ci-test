@@ -202,6 +202,7 @@ jobs:
         CCACHE_TEMPDIR: /tmp/ccache
         CCACHE_DEBUG: 1
         CCACHE_DEBUGDIR: /tmp/ccache-debug
+        CCACHE_COMPILERCHECK: content
         TT_METAL_CCACHE_KERNEL_SUPPORT: 1
         TT_METAL_LOGGER_LEVEL: Debug
         TT_METAL_LOGGER_TYPES: BuildKernels
@@ -223,7 +224,7 @@ jobs:
             echo "Redis password is missing. Did you forget 'secrets: inherit'?"
             exit 1
           fi
-          CCACHE_REMOTE_STORAGE="redis://${{ vars.REDIS_USER }}:${{ secrets.REDIS_PASSWORD }}@${{ vars.REDIS_HOST }}:${{ vars.REDIS_PORT }}|read-only=${{ vars.REDIS_IS_READONLY }}"
+          CCACHE_REMOTE_STORAGE="redis://${{ vars.REDIS_USER }}:${{ secrets.REDIS_PASSWORD }}@${{ vars.REDIS_HOST }}:${{ vars.REDIS_PORT }}/3|read-only=${{ vars.REDIS_IS_READONLY }}"
           echo "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE}" >> $GITHUB_ENV
 
       - name: Create ccache tmpdir
