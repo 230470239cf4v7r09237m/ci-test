@@ -290,13 +290,12 @@ jobs:
             echo "Installing redis-cli..."
             apt-get update -qq && apt-get install -y -qq redis-tools
           fi
-          REDIS_URI="redis://$REDIS_USER:$REDIS_PASS@$REDIS_HOST:$REDIS_PORT"
           echo "Testing Redis connectivity at $REDIS_HOST:$REDIS_PORT (user: $REDIS_USER)"
-          if ! redis-cli -u "$REDIS_URI" --no-auth-warning PING; then
+          if ! redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --user "$REDIS_USER" -a "$REDIS_PASS" --no-auth-warning PING; then
             echo "Redis PING failed. Running diagnostics..."
-            redis-cli -u "$REDIS_URI" --no-auth-warning INFO server || true
-            redis-cli -u "$REDIS_URI" --no-auth-warning INFO clients || true
-            redis-cli -u "$REDIS_URI" --no-auth-warning CONFIG GET requirepass || true
+            redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --user "$REDIS_USER" -a "$REDIS_PASS" --no-auth-warning INFO server || true
+            redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --user "$REDIS_USER" -a "$REDIS_PASS" --no-auth-warning INFO clients || true
+            redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --user "$REDIS_USER" -a "$REDIS_PASS" --no-auth-warning CONFIG GET requirepass || true
             exit 1
           fi
 
