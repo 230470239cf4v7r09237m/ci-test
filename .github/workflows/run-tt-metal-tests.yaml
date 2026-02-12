@@ -292,13 +292,7 @@ jobs:
           fi
           echo "Testing Redis connectivity at $REDIS_HOST:$REDIS_PORT (user: $REDIS_USER)"
           getent hosts "$REDIS_HOST"
-          if ! redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --user "$REDIS_USER" -a "$REDIS_PASS" --no-auth-warning PING; then
-            echo "Redis PING failed. Running diagnostics..."
-            redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --user "$REDIS_USER" -a "$REDIS_PASS" --no-auth-warning INFO server || true
-            redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --user "$REDIS_USER" -a "$REDIS_PASS" --no-auth-warning INFO clients || true
-            redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --user "$REDIS_USER" -a "$REDIS_PASS" --no-auth-warning CONFIG GET requirepass || true
-            exit 1
-          fi
+          
 
       - name: Run tests
         timeout-minutes: 30
