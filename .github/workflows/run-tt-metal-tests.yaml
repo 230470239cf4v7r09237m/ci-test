@@ -291,6 +291,7 @@ jobs:
             apt-get update -qq && apt-get install -y -qq redis-tools
           fi
           echo "Testing Redis connectivity at $REDIS_HOST:$REDIS_PORT (user: $REDIS_USER)"
+          getent hosts "$REDIS_HOST"
           if ! redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --user "$REDIS_USER" -a "$REDIS_PASS" --no-auth-warning PING; then
             echo "Redis PING failed. Running diagnostics..."
             redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --user "$REDIS_USER" -a "$REDIS_PASS" --no-auth-warning INFO server || true
