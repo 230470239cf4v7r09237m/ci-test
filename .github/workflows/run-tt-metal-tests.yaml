@@ -220,29 +220,29 @@ jobs:
       - name: Check Redis credentials
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
         run: |
-          if [ -z "${{ secrets.REDIS_PASSWORD }}" ]; then
-            echo "Redis password is missing. Did you forget 'secrets: inherit'?"
+          if [ -z "${{ secrets.REDIS_CCACHE_PASSWORD }}" ]; then
+            echo "Redis ccache password is missing. Did you forget 'secrets: inherit'?"
             exit 1
           fi
-          CCACHE_REMOTE_STORAGE="redis://${{ vars.REDIS_USER }}:${{ secrets.REDIS_PASSWORD }}@${{ vars.REDIS_HOST }}:${{ vars.REDIS_PORT }}/3|read-only=${{ vars.REDIS_IS_READONLY }}"
+          CCACHE_REMOTE_STORAGE="redis://${{ vars.REDIS_CCACHE_USER }}:${{ secrets.REDIS_CCACHE_PASSWORD }}@${{ vars.REDIS_CCACHE_HOST }}:${{ vars.REDIS_CCACHE_PORT }}|read-only=${{ vars.REDIS_CCACHE_IS_READONLY }}"
           echo "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE}" >> $GITHUB_ENV
 
       - name: Create ccache tmpdir
         run: mkdir -p /tmp/ccache
 
-      # - name: Pre-create ccache files for ephemeral runner
-      #   run: |
-      #     echo "=== Creating ccache files for ephemeral runner ==="
-      #     # Create inode cache file that ccache expects
-      #     touch /tmp/ccache/inode-cache-64.v2
-      #     # Set appropriate permissions
-      #     chmod 644 /tmp/ccache/inode-cache-64.v2
-      #     echo "Created inode cache file:"
-      #     ls -la /tmp/ccache/inode-cache-64.v2
-      #     echo "ccache temp directory structure:"
-      #     ls -la /tmp/ccache/
-      #     # Create debug directory
-      #     mkdir -p /tmp/ccache-debug
+      - name: Pre-create ccache files for ephemeral runner
+        run: |
+          echo "=== Creating ccache files for ephemeral runner ==="
+          # Create inode cache file that ccache expects
+          touch /tmp/ccache/inode-cache-64.v2
+          # Set appropriate permissions
+          chmod 644 /tmp/ccache/inode-cache-64.v2
+          echo "Created inode cache file:"
+          ls -la /tmp/ccache/inode-cache-64.v2
+          echo "ccache temp directory structure:"
+          ls -la /tmp/ccache/
+          # Create debug directory
+          mkdir -p /tmp/ccache-debug
 
       - name: 🧬 Checkout Repository
         uses: actions/checkout@v4
