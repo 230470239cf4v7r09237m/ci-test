@@ -284,12 +284,21 @@ jobs:
         run: |
           REDIS_HOST="${{ vars.REDIS_CCACHE_HOST }}"
           REDIS_PORT="${{ vars.REDIS_CCACHE_PORT }}"
+          REDIS_USER="${{ vars.REDIS_CCACHE_USER }}"
           REDIS_PASS="${{ secrets.REDIS_CCACHE_PASSWORD }}"
           if ! command -v redis-cli >/dev/null 2>&1; then
             echo "Installing redis-cli..."
             apt-get update -qq && apt-get install -y -qq redis-tools
           fi
-          redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --no-auth-warning -a "$REDIS_PASS" PING
+          REDIS_URI="redis://$REDIS_USER:$REDIS_PASS@$REDIS_HOST:$REDIS_PORT"
+          echo "Testing Redis connectivity at $REDIS_HOST:$REDIS_PORT (user: $REDIS_USER)"
+          if ! redis-cli -u "$REDIS_URI" --no-auth-warning PING; then
+            echo "Redis PING failed. Running diagnostics..."
+            redis-cli -u "$REDIS_URI" --no-auth-warning INFO server || true
+            redis-cli -u "$REDIS_URI" --no-auth-warning INFO clients || true
+            redis-cli -u "$REDIS_URI" --no-auth-warning CONFIG GET requirepass || true
+            exit 1
+          fi
 
       - name: Run tests
         timeout-minutes: 30
