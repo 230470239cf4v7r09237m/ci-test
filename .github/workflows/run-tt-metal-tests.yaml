@@ -279,6 +279,18 @@ jobs:
         run: |
           uv pip install pytest pytest-timeout
 
+      - name: Test Redis connection
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
+        run: |
+          REDIS_HOST="${{ vars.REDIS_CCACHE_HOST }}"
+          REDIS_PORT="${{ vars.REDIS_CCACHE_PORT }}"
+          REDIS_PASS="${{ secrets.REDIS_CCACHE_PASSWORD }}"
+          if ! command -v redis-cli >/dev/null 2>&1; then
+            echo "Installing redis-cli..."
+            apt-get update -qq && apt-get install -y -qq redis-tools
+          fi
+          redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --no-auth-warning -a "$REDIS_PASS" PING
+
       - name: Run tests
         timeout-minutes: 30
         run: |
