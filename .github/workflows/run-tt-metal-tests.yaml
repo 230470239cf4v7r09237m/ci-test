@@ -200,7 +200,6 @@ jobs:
         PYTHONPATH: /work
         ARCH_NAME: wormhole_b0
         CCACHE_TEMPDIR: /tmp/ccache
-        TT_METAL_CCACHE_KERNEL_SUPPORT: 1
         TT_METAL_LOGGER_LEVEL: Debug
         TT_METAL_LOGGER_TYPES: BuildKernels
         TT_METAL_LOG_KERNELS_COMPILE_COMMANDS: 1
