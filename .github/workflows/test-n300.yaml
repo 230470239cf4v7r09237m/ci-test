@@ -9,9 +9,9 @@ jobs:
   test-n300-standard:
     runs-on: tt-ubuntu-2204-n300-stable
     steps:
-      - run: echo "Pre-flight passed, kmd 2.7.0 is working"
+      - run: echo "Pre-flight passed, smi 4.0.0 is working"
 
   test-n300-viommu:
     runs-on: tt-ubuntu-2204-n300-viommu-stable
     steps:
-      - run: echo "Pre-flight passed, kmd 2.7.0 is working via VIOMMU"
+      - run: echo "Pre-flight passed, smi 4.0.0 is working via VIOMMU"
