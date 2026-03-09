@@ -1,6 +1,7 @@
 name: Test priority runner
 on:
   merge_group:
+  workflow_dispatch:
 
 jobs:
   test:
@@ -8,4 +9,4 @@ jobs:
       group: organization/Default
       labels: tt-ubuntu-2204-small-prio-stable
     steps:
-      - run: echo "merge_group trigger works"
+      - run: echo "trigger was ${{ github.event_name }}"
