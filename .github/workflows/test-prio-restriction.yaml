@@ -1,0 +1,8 @@
+name: Test priority runner - should fail
+on: workflow_dispatch
+
+jobs:
+  test:
+    runs-on: tt-ubuntu-2204-small-prio-stable
+    steps:
+      - run: echo "This should be blocked"
