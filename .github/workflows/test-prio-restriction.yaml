@@ -7,6 +7,6 @@ jobs:
   test:
     runs-on:
       group: organization/Default
-      labels: tt-ubuntu-2204-small-prio-stable
+      labels: tt-ubuntu-2204-n300-viommu-prio-stable
     steps:
       - run: echo "trigger was ${{ github.event_name }}"
