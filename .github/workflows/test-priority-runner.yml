@@ -1,9 +1,10 @@
 name: Test Priority Runner
 on:
   workflow_dispatch:
+  merge_group:
 
 jobs:
   test:
     runs-on: tt-ubuntu-2204-n300-prio-stable
     steps:
-      - run: echo "This should not run"
+      - run: echo "Runner accepted the job"
