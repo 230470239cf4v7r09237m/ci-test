@@ -1,8 +1,6 @@
 name: Test Priority Runner
 on:
   workflow_dispatch:
-  push:
-    branches: ['test-priority-*']
 
 jobs:
   test:
