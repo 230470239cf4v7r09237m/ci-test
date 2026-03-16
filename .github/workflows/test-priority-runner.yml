@@ -5,14 +5,12 @@ on:
   pull_request:
 
 jobs:
-  pr-gate:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+  regular-job:
+    runs-on: tt-ubuntu-2204-n300-viommu-stable
     steps:
-      - run: echo "PR check passed"
+      - run: echo "Regular job picked up"
 
-  test:
-    if: github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch'
-    runs-on: tt-ubuntu-2204-n300-prio-stable
+  priority-job:
+    runs-on: tt-ubuntu-2204-n300-viommu-prio-stable
     steps:
-      - run: echo "Runner accepted the job"
+      - run: echo "Priority job picked up"
