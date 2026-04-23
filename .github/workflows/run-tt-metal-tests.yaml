@@ -28,6 +28,16 @@ on:
         required: false
         default: 'main'
         type: string
+      ttsim_version:
+        description: 'TTSim version for simulator jobs'
+        required: false
+        default: 'v1.5.4'
+        type: string
+      ttsim_image:
+        description: 'Docker image for ttsim test jobs'
+        required: false
+        default: 'ghcr.io/tenstorrent/tt-metal/tt-metalium/ubuntu-22.04-ci-test-amd64:latest'
+        type: string
 
 jobs:
   build-artifact:
@@ -286,3 +296,90 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           ccache -s >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+
+  ttsim-test:
+    needs: [build-artifact, build-wheel]
+    name: "🔬 TTSim [${{ matrix.runner-label }}]"
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        runner-label: [tt-ubuntu-2204-medium-stable, tt-ubuntu-2204-small-stable]
+    runs-on: ${{ matrix.runner-label }}
+    container:
+      image: ${{ inputs.ttsim_image }}
+      env:
+        TT_METAL_HOME: /work
+        TT_METAL_RUNTIME_ROOT: /work
+        LD_LIBRARY_PATH: /work/build/lib
+        PYTHONPATH: /work
+        ARCH_NAME: wormhole_b0
+        TT_METAL_SIMULATOR_HOME: /work/sim
+        TT_METAL_SIMULATOR: /work/sim/libttsim.so
+        TT_METAL_SLOW_DISPATCH_MODE: 1
+        TT_METAL_DISABLE_SFPLOADMACRO: 1
+        PYTHONHASHSEED: 0
+        OPENBLAS_NUM_THREADS: 1
+        OMP_NUM_THREADS: 1
+      volumes:
+        - ${{ github.workspace }}/docker-job:/work
+    defaults:
+      run:
+        shell: bash
+        working-directory: /work
+    steps:
+      - name: ⬇️ Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: 'tenstorrent/tt-metal'
+          ref: ${{ inputs.reference || 'main' }}
+          submodules: recursive
+          path: docker-job
+
+      - name: 📦 Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-artifact.outputs.build_artifact_name }}
+          path: docker-job
+
+      - name: 📂 Extract Build Files
+        working-directory: docker-job
+        run: tar --zstd -xf ttm_any.tar.zst
+
+      - name: 🧪 Download Python Wheel
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-wheel.outputs.wheel_artifact_name }}
+          path: docker-job
+
+      - name: 💿 Install Wheel
+        working-directory: docker-job
+        run: |
+          WHEEL_FILENAME=$(ls -1 *.whl)
+          uv pip install "$WHEEL_FILENAME"
+          uv pip install pytest pytest-timeout
+
+      - name: 🔬 Download TTSim binary
+        run: |
+          mkdir -p $TT_METAL_SIMULATOR_HOME
+          curl -fL --retry 5 --retry-delay 10 \
+            "https://github.com/tenstorrent/ttsim/releases/download/${{ inputs.ttsim_version }}/libttsim_wh.so" \
+            -o $TT_METAL_SIMULATOR_HOME/libttsim.so
+          cp /work/docker-job/tt_metal/soc_descriptors/wormhole_b0_80_arch.yaml \
+             $TT_METAL_SIMULATOR_HOME/soc_descriptor.yaml
+
+      - name: 🧪 Run TTSim C++ unit tests
+        timeout-minutes: 15
+        working-directory: /work/docker-job
+        run: |
+          ./build/test/tt_metal/unit_tests_api --gtest_filter="MeshDeviceFixture.IdleEthTestNocStreamRegs"
+          ./build/test/tt_metal/unit_tests_api --gtest_filter="MeshDispatchFixture.IdleEthDRAMLoopbackSingleCore"
+          ./build/test/tt_metal/unit_tests_dispatch --gtest_filter="MeshDispatchFixture.TensixIdleEthTestSemaphores"
+          ./build/test/tt_metal/unit_tests_dispatch --gtest_filter="MeshDispatchFixture.EthTestBlank"
+
+      - name: 🐍 Run TTNN matmul tests
+        timeout-minutes: 30
+        working-directory: /work/docker-job
+        run: |
+          pytest --timeout 300 tests/ttnn/unit_tests/operations/matmul \
+            -xv -m "not disable_fast_runtime_mode"
