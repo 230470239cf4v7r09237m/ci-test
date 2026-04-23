@@ -1,0 +1,333 @@
+name: "TTSim Runner Comparison (medium vs small)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      reference:
+        description: 'tt-metal branch/tag/SHA'
+        required: false
+        default: 'main'
+        type: string
+      ttsim_version:
+        description: 'TTSim version'
+        required: false
+        default: 'v1.5.4'
+        type: string
+      build_image:
+        description: 'CI build Docker image'
+        required: false
+        default: 'ghcr.io/tenstorrent/tt-metal/tt-metalium/ubuntu-22.04-ci-build-amd64:latest'
+        type: string
+      test_image:
+        description: 'CI test Docker image'
+        required: false
+        default: 'ghcr.io/tenstorrent/tt-metal/tt-metalium/ubuntu-22.04-ci-test-amd64:latest'
+        type: string
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Build (large-stable — known good baseline)
+  # ─────────────────────────────────────────────────────────────────────────────
+  build:
+    name: "🛠️ Build"
+    runs-on: tt-ubuntu-2204-large-stable
+    timeout-minutes: 100
+    outputs:
+      build_artifact_name: ${{ steps.names.outputs.build }}
+    container:
+      image: ${{ inputs.build_image }}
+      env:
+        CCACHE_REMOTE_ONLY: "true"
+        CCACHE_TEMPDIR: /tmp/ccache
+        TRACY_NO_INVARIANT_CHECK: 1
+        TRACY_NO_ISA_EXTENSIONS: 1
+      volumes:
+        - ${{ github.workspace }}/docker-job:/work
+        - /home/ubuntu/.ccache-ci:/github/home/.ccache
+      options: --group-add 1457 --tmpfs /tmp
+    defaults:
+      run:
+        shell: bash
+        working-directory: /work
+    steps:
+      - name: Check Redis credentials
+        run: |
+          if [ -z "${{ secrets.REDIS_PASSWORD }}" ]; then
+            echo "Redis password is missing."
+            exit 1
+          fi
+          CCACHE_REMOTE_STORAGE="redis://${{ vars.REDIS_USER }}:${{ secrets.REDIS_PASSWORD }}@${{ vars.REDIS_HOST }}:${{ vars.REDIS_PORT }}|read-only=${{ vars.REDIS_IS_READONLY }}"
+          echo "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE}" >> $GITHUB_ENV
+
+      - name: ⬇️ Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: tenstorrent/tt-metal
+          ref: ${{ inputs.reference || 'main' }}
+          submodules: recursive
+          fetch-depth: 500
+          fetch-tags: true
+          path: docker-job
+
+      - name: Set artifact names
+        id: names
+        run: |
+          echo "build=ttm-build-ttsim-${{ github.sha }}-${{ github.run_id }}" >> $GITHUB_OUTPUT
+
+      - name: Create ccache tmpdir
+        run: mkdir -p /tmp/ccache
+
+      - name: Prepare ccache
+        run: ccache -z
+
+      - name: 🔧 CMake configure
+        run: |
+          ./build_metal.sh \
+            --build-dir build \
+            --build-type Release \
+            --toolchain-path cmake/x86_64-linux-clang-20-libstdcpp-toolchain.cmake \
+            --build-metal-tests --build-ttnn-tests \
+            --enable-ccache --configure-only
+
+      - name: 🛠️ Compile
+        run: cmake --build build --target install
+
+      - name: Publish ccache summary
+        run: |
+          echo '## CCache Summary' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          ccache -s >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: 'Tar build files'
+        run: |
+          ARTIFACT_PATHS="ttnn/ttnn/*.so build/lib build/test build/tools runtime data"
+          tar -I 'zstd --adapt=min=9 -T0' -cvhf ttm_ttsim.tar.zst $ARTIFACT_PATHS
+
+      - name: ☁️ Upload build artifact
+        uses: actions/upload-artifact@v4
+        timeout-minutes: 10
+        with:
+          name: ${{ steps.names.outputs.build }}
+          path: /work/ttm_ttsim.tar.zst
+          if-no-files-found: error
+          retention-days: 1
+
+  build-wheel:
+    name: "🐍 Build wheel"
+    runs-on: tt-ubuntu-2204-large-stable
+    timeout-minutes: 30
+    outputs:
+      wheel_artifact_name: ${{ steps.name.outputs.wheel }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check Redis credentials
+        run: |
+          if [ -z "${{ secrets.REDIS_PASSWORD }}" ]; then exit 1; fi
+          CCACHE_REMOTE_STORAGE="redis://${{ vars.REDIS_USER }}:${{ secrets.REDIS_PASSWORD }}@${{ vars.REDIS_HOST }}:${{ vars.REDIS_PORT }}|read-only=${{ vars.REDIS_IS_READONLY }}"
+          echo "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE}" >> $GITHUB_ENV
+
+      - name: ⬇️ Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: tenstorrent/tt-metal
+          ref: ${{ inputs.reference || 'main' }}
+          submodules: recursive
+          fetch-depth: 500
+          fetch-tags: true
+
+      - name: Set artifact name
+        id: name
+        run: echo "wheel=ttm-wheel-ttsim-${{ github.sha }}-${{ github.run_id }}" >> $GITHUB_OUTPUT
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: 🐍 Build wheel
+        uses: pypa/cibuildwheel@v2.23.2
+        env:
+          CIBW_BUILD: "cp310-manylinux_x86_64*"
+          CIBW_SKIP: "*-musllinux_*"
+          CIBW_BUILD_FRONTEND: build
+          CIBW_ENVIRONMENT: >-
+            CCACHE_REMOTE_ONLY=true
+            CCACHE_TEMPDIR=/tmp/ccache
+            CCACHE_REMOTE_STORAGE="${{ env.CCACHE_REMOTE_STORAGE }}"
+          CIBW_BEFORE_BUILD: "mkdir -p /tmp/ccache && ccache -z"
+          CIBW_TEST_COMMAND: 'python -c "import ttnn"'
+          CIBW_MANYLINUX_X86_64_IMAGE: ghcr.io/tenstorrent/tt-metal/tt-metalium/manylinux-amd64:latest
+
+      - name: ☁️ Upload wheel
+        uses: actions/upload-artifact@v4
+        timeout-minutes: 10
+        with:
+          name: ${{ steps.name.outputs.wheel }}
+          path: wheelhouse
+          if-no-files-found: error
+          retention-days: 1
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # TTSim C++ unit tests — medium vs small × wh vs bh
+  # ─────────────────────────────────────────────────────────────────────────────
+  ttsim-cpp:
+    name: "🧪 TTSim C++ [${{ matrix.runner-label }}] [${{ matrix.arch }}]"
+    needs: build
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        runner-label: [tt-ubuntu-2204-medium-stable, tt-ubuntu-2204-small-stable]
+        arch: [wormhole_b0, blackhole]
+        include:
+          - arch: wormhole_b0
+            build_suffix: wh
+            soc_desc: wormhole_b0_80_arch.yaml
+          - arch: blackhole
+            build_suffix: bh
+            soc_desc: blackhole_140_arch.yaml
+    runs-on: ${{ matrix.runner-label }}
+    container:
+      image: ${{ inputs.test_image }}
+      volumes:
+        - ${{ github.workspace }}/docker-job:/work
+      env:
+        TT_METAL_HOME: /work/docker-job
+        TT_METAL_SIMULATOR_HOME: /work/sim
+        TT_METAL_SIMULATOR: /work/sim/libttsim.so
+        TT_METAL_SLOW_DISPATCH_MODE: 1
+        TT_METAL_DISABLE_SFPLOADMACRO: 1
+        ARCH_NAME: ${{ matrix.arch }}
+        LD_LIBRARY_PATH: /work/docker-job/build/lib
+    defaults:
+      run:
+        shell: bash
+        working-directory: /work
+    steps:
+      - name: ⬇️ Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: tenstorrent/tt-metal
+          ref: ${{ inputs.reference || 'main' }}
+          submodules: recursive
+          path: docker-job
+
+      - name: 📦 Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.build_artifact_name }}
+          path: docker-job
+
+      - name: 📂 Extract build files
+        working-directory: docker-job
+        run: tar --zstd -xf ttm_ttsim.tar.zst
+
+      - name: Download ttsim binary
+        run: |
+          mkdir -p $TT_METAL_SIMULATOR_HOME
+          curl -fL --retry 5 --retry-delay 10 \
+            "https://github.com/tenstorrent/ttsim/releases/download/${{ inputs.ttsim_version }}/libttsim_${{ matrix.build_suffix }}.so" \
+            -o $TT_METAL_SIMULATOR_HOME/libttsim.so
+          cp /work/docker-job/tt_metal/soc_descriptors/${{ matrix.soc_desc }} \
+             $TT_METAL_SIMULATOR_HOME/soc_descriptor.yaml
+
+      - name: 🧪 C++ unit tests
+        timeout-minutes: 15
+        run: |
+          cd /work/docker-job
+          ./build/test/tt_metal/unit_tests_api --gtest_filter="MeshDeviceFixture.IdleEthTestNocStreamRegs"
+          ./build/test/tt_metal/unit_tests_api --gtest_filter="MeshDispatchFixture.IdleEthDRAMLoopbackSingleCore"
+          ./build/test/tt_metal/unit_tests_debug_tools --gtest_filter="DPrintMeshFixture.IdleEthTestPrint"
+          ./build/test/tt_metal/unit_tests_debug_tools --gtest_filter="MeshWatcherFixture.TestWatcherRingBufferIErisc"
+          ./build/test/tt_metal/unit_tests_debug_tools --gtest_filter="MeshWatcherFixture.TestWatcherStackUsage0"
+          ./build/test/tt_metal/unit_tests_dispatch --gtest_filter="MeshDispatchFixture.TensixIdleEthTestSemaphores"
+          ./build/test/tt_metal/unit_tests_dispatch --gtest_filter="MeshDispatchFixture.EthTestBlank"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # TTSim TTNN pytests (matmul group) — medium vs small × wh vs bh
+  # ─────────────────────────────────────────────────────────────────────────────
+  ttsim-ttnn-matmul:
+    name: "🐍 TTSim TTNN matmul [${{ matrix.runner-label }}] [${{ matrix.arch }}]"
+    needs: [build, build-wheel]
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        runner-label: [tt-ubuntu-2204-medium-stable, tt-ubuntu-2204-small-stable]
+        arch: [wormhole_b0, blackhole]
+        include:
+          - arch: wormhole_b0
+            build_suffix: wh
+            soc_desc: wormhole_b0_80_arch.yaml
+          - arch: blackhole
+            build_suffix: bh
+            soc_desc: blackhole_140_arch.yaml
+    runs-on: ${{ matrix.runner-label }}
+    container:
+      image: ${{ inputs.test_image }}
+      volumes:
+        - ${{ github.workspace }}/docker-job:/work
+      env:
+        TT_METAL_HOME: /work/docker-job
+        TT_METAL_RUNTIME_ROOT: /work/docker-job
+        TT_METAL_SIMULATOR_HOME: /work/sim
+        TT_METAL_SIMULATOR: /work/sim/libttsim.so
+        TT_METAL_SLOW_DISPATCH_MODE: 1
+        TT_METAL_DISABLE_SFPLOADMACRO: 1
+        ARCH_NAME: ${{ matrix.arch }}
+        LD_LIBRARY_PATH: /work/docker-job/build/lib
+        PYTHONPATH: /work/docker-job
+        PYTHONHASHSEED: 0
+        OPENBLAS_NUM_THREADS: 1
+        OMP_NUM_THREADS: 1
+        LOGURU_LEVEL: INFO
+    defaults:
+      run:
+        shell: bash
+        working-directory: /work/docker-job
+    steps:
+      - name: ⬇️ Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: tenstorrent/tt-metal
+          ref: ${{ inputs.reference || 'main' }}
+          submodules: recursive
+          path: docker-job
+
+      - name: 📦 Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.build_artifact_name }}
+          path: docker-job
+
+      - name: 📂 Extract build files
+        working-directory: docker-job
+        run: tar --zstd -xf ttm_ttsim.tar.zst
+
+      - name: 📦 Download wheel
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-wheel.outputs.wheel_artifact_name }}
+          path: docker-job
+
+      - name: 💿 Install wheel + test deps
+        run: |
+          uv pip install $(ls *.whl | head -1)
+          uv pip install pytest-timeout
+
+      - name: Download ttsim binary
+        run: |
+          mkdir -p $TT_METAL_SIMULATOR_HOME
+          curl -fL --retry 5 --retry-delay 10 \
+            "https://github.com/tenstorrent/ttsim/releases/download/${{ inputs.ttsim_version }}/libttsim_${{ matrix.build_suffix }}.so" \
+            -o $TT_METAL_SIMULATOR_HOME/libttsim.so
+          cp tt_metal/soc_descriptors/${{ matrix.soc_desc }} \
+             $TT_METAL_SIMULATOR_HOME/soc_descriptor.yaml
+
+      - name: 🐍 TTNN matmul tests
+        run: |
+          pytest --timeout 300 tests/ttnn/unit_tests/operations/matmul \
+            -xv -m "not disable_fast_runtime_mode"
