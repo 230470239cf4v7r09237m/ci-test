@@ -365,12 +365,11 @@ jobs:
           curl -fL --retry 5 --retry-delay 10 \
             "https://github.com/tenstorrent/ttsim/releases/download/${{ inputs.ttsim_version }}/libttsim_wh.so" \
             -o $TT_METAL_SIMULATOR_HOME/libttsim.so
-          cp /work/docker-job/tt_metal/soc_descriptors/wormhole_b0_80_arch.yaml \
+          cp /work/tt_metal/soc_descriptors/wormhole_b0_80_arch.yaml \
              $TT_METAL_SIMULATOR_HOME/soc_descriptor.yaml
 
       - name: 🧪 Run TTSim C++ unit tests
         timeout-minutes: 15
-        working-directory: /work/docker-job
         run: |
           ./build/test/tt_metal/unit_tests_api --gtest_filter="MeshDeviceFixture.IdleEthTestNocStreamRegs"
           ./build/test/tt_metal/unit_tests_api --gtest_filter="MeshDispatchFixture.IdleEthDRAMLoopbackSingleCore"
@@ -379,7 +378,6 @@ jobs:
 
       - name: 🐍 Run TTNN matmul tests
         timeout-minutes: 30
-        working-directory: /work/docker-job
         run: |
           pytest --timeout 300 tests/ttnn/unit_tests/operations/matmul \
             -xv -m "not disable_fast_runtime_mode"
