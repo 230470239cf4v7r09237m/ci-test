@@ -2,6 +2,8 @@ name: Test Priority Runner
 on:
   workflow_dispatch:
   merge_group:
+    types:
+      - checks_requested
   pull_request:
 
 jobs:
@@ -18,11 +20,51 @@ jobs:
       - run: echo "CPU priority large job picked up on ${{ runner.name }}"
 
   n300-regular:
+    if: github.event_name != 'merge_group'
     runs-on: tt-ubuntu-2204-n300-viommu-stable
     steps:
       - run: echo "N300 regular job picked up on ${{ runner.name }}"
 
   n300-priority:
+    if: github.event_name != 'merge_group'
     runs-on: tt-ubuntu-2204-n300-viommu-prio-stable
     steps:
       - run: echo "N300 priority job picked up on ${{ runner.name }}"
+
+  # Single status check for branch protection / merge queue (require this job name).
+  test-priority-runner-status:
+    name: Test Priority Runner Status
+    if: >-
+      ${{
+        always() &&
+        !cancelled() &&
+        (
+          contains(join(needs.*.result, ','), 'success') ||
+          contains(join(needs.*.result, ','), 'failure')
+        )
+      }}
+    needs:
+      - cpu-regular-large
+      - cpu-priority-large
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require CPU priority runner on merge queue
+        if: github.event_name == 'merge_group' && needs.cpu-priority-large.result != 'success'
+        run: |
+          echo "Expected cpu-priority-large to succeed on merge_group, got: ${{ needs.cpu-priority-large.result }}"
+          exit 1
+
+      - name: Require CPU regular runner on pull request
+        if: github.event_name == 'pull_request' && needs.cpu-regular-large.result != 'success'
+        run: |
+          echo "Expected cpu-regular-large to succeed on pull_request, got: ${{ needs.cpu-regular-large.result }}"
+          exit 1
+
+      - name: Require CPU regular runner on manual dispatch
+        if: github.event_name == 'workflow_dispatch' && needs.cpu-regular-large.result != 'success'
+        run: |
+          echo "Expected cpu-regular-large to succeed on workflow_dispatch, got: ${{ needs.cpu-regular-large.result }}"
+          exit 1
+
+      - name: Report success
+        run: echo "Test Priority Runner Status passed for ${{ github.event_name }}"
