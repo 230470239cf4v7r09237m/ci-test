@@ -6,6 +6,7 @@ on:
 
 jobs:
   cpu-regular-large:
+    if: github.event_name != 'merge_group'
     runs-on: tt-ubuntu-2204-large-stable
     steps:
       - run: echo "CPU regular large job picked up on ${{ runner.name }}"
