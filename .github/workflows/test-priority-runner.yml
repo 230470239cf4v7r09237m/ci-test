@@ -5,12 +5,23 @@ on:
   pull_request:
 
 jobs:
-  regular-job:
+  cpu-regular-large:
+    runs-on: tt-ubuntu-2204-large-stable
+    steps:
+      - run: echo "CPU regular large job picked up on ${{ runner.name }}"
+
+  cpu-priority-large:
+    if: github.event_name == 'merge_group'
+    runs-on: tt-ubuntu-2204-large-prio-stable
+    steps:
+      - run: echo "CPU priority large job picked up on ${{ runner.name }}"
+
+  n300-regular:
     runs-on: tt-ubuntu-2204-n300-viommu-stable
     steps:
-      - run: echo "Regular job picked up"
+      - run: echo "N300 regular job picked up on ${{ runner.name }}"
 
-  priority-job:
+  n300-priority:
     runs-on: tt-ubuntu-2204-n300-viommu-prio-stable
     steps:
-      - run: echo "Priority job picked up"
+      - run: echo "N300 priority job picked up on ${{ runner.name }}"
