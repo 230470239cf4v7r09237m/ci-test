@@ -188,7 +188,7 @@ jobs:
 
   tt-metal-test:
     name: TT-Metal Tests
-    runs-on: tt-ubuntu-2204-N300-stable
+    runs-on: tt-ubuntu-2204-n300-stable
     environment: ${{ github.ref == 'refs/heads/main' && 'mainline' || '' }}
     container:
       image: ${{ inputs.dev_image }}
