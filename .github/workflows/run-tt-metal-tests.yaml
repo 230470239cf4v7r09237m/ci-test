@@ -215,3 +215,10 @@ jobs:
     steps:
       - name: yeet
         run: echo "yeet"
+
+  cpu-print-test:
+    name: CPU Print Test
+    runs-on: tt-ubuntu-2204-large-stable
+    steps:
+      - name: yeet
+        run: echo "yeet"
