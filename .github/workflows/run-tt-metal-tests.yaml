@@ -213,13 +213,13 @@ jobs:
           CIBW_SKIP: "*-musllinux_*"
           CIBW_BUILD_FRONTEND: build
           CIBW_ENVIRONMENT: >-
-            CCACHE_REMOTE_ONLY=true
-            CCACHE_TEMPDIR=/tmp/ccache
+            CCACHE_REMOTE_ONLY="true"
+            CCACHE_TEMPDIR="/tmp/ccache"
             CCACHE_REMOTE_STORAGE="${{ env.CCACHE_REMOTE_STORAGE }}"
-            CCACHE_COMPRESS: "true"
-            CCACHE_COMPRESSLEVEL: "3"
-            CCACHE_LOGFILE: /tmp/ccache.log
-            CCACHE_BASEDIR: /work
+            CCACHE_COMPRESS="true"
+            CCACHE_COMPRESSLEVEL="3"
+            CCACHE_LOGFILE="/tmp/ccache.log"
+            CCACHE_BASEDIR="/work"
             CIBW_ENABLE_TRACY=ON
             CIBW_BUILD_TYPE=Release
           CIBW_BEFORE_BUILD: "mkdir -p /tmp/ccache && ccache -z && ccache -p"
