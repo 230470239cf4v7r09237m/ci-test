@@ -42,6 +42,14 @@ jobs:
       env:
         CCACHE_REMOTE_ONLY: "true"
         CCACHE_TEMPDIR: /tmp/ccache
+        CCACHE_COMPRESS: "true"
+        CCACHE_COMPRESSLEVEL: "3"
+        # Log ccache operations to a file so remote storage errors are visible in CI.
+        # Errors (storage helper failures, Redis timeouts) would otherwise be silent.
+        CCACHE_LOGFILE: /tmp/ccache.log
+        # Strip the working directory prefix from hashed paths so cache entries
+        # are reusable across machines even if the checkout path differs.
+        CCACHE_BASEDIR: /work
         TRACY_NO_INVARIANT_CHECK: 1
         TRACY_NO_ISA_EXTENSIONS: 1
       volumes:
@@ -62,8 +70,22 @@ jobs:
             echo "Redis password is missing. Did you forget 'secrets: inherit'?"
             exit 1
           fi
-          CCACHE_REMOTE_STORAGE="redis://${{ vars.REDIS_USER }}:${{ secrets.REDIS_PASSWORD }}@${{ vars.REDIS_HOST }}:${{ vars.REDIS_PORT }}|read-only=${{ vars.REDIS_IS_READONLY }}"
+          # Conditionally set this here so that it remains unset on forks,
+          # otherwise it resolves an invalid URL and the job fails
+          REDIS_USER="${{ vars.REDIS_USER }}"
+          REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}"
+          REDIS_HOST="${{ vars.REDIS_HOST }}"
+          REDIS_PORT="${{ vars.REDIS_PORT }}"
+          # ccache 4.13 bug: read-only is std::optional<bool>; the write gate checks
+          # `if (entry.config.read_only)` which is true whenever the optional HAS a value —
+          # including when that value is false.  Omit the property entirely unless we
+          # actually want read-only mode; ccache's default when absent is writable.
+          CCACHE_REMOTE_STORAGE="redis://${REDIS_USER}:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}"
+          if [ "${{ vars.REDIS_IS_READONLY }}" = "true" ]; then
+            CCACHE_REMOTE_STORAGE="${CCACHE_REMOTE_STORAGE}|read-only=true"
+          fi
           echo "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE}" >> $GITHUB_ENV
+          echo "CCACHE_REMOTE_STORAGE: ${CCACHE_REMOTE_STORAGE}"
 
       - name: ⬇️ Checkout
         uses: actions/checkout@v4
@@ -86,17 +108,34 @@ jobs:
           ./build_metal.sh --build-dir build --build-type Release --toolchain-path cmake/x86_64-linux-clang-20-libstdcpp-toolchain.cmake --build-metal-tests --build-ttnn-tests --build-programming-examples --build-tt-train --enable-ccache --configure-only
 
       - name: 🛠️ Compile
-        run: cmake --build build --target install
+        run: |
+          ".github/scripts/utils/host-load-sidecar.sh" \
+            --interval 1 \
+            --label "cmake build (install target)" \
+            --output "$GITHUB_STEP_SUMMARY" \
+            -- cmake --build build --target install
 
       - name: 📦 Package
-        run: cmake --build build --target package
+        run: |
+          cmake --build build --target package
+          ls -1sh build/*.rpm || true
+          ls -1sh build/*.deb build/*.ddeb || true
 
       - name: Publish ccache summary
         run: |
-          echo '## Build CCache Summary' >> $GITHUB_STEP_SUMMARY
+          echo '## CCache Summary' >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           ccache -s >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+
+          # Surface remote storage stats and errors from the ccache log.
+          # Uses a filter script to avoid overflowing the 1024k step summary limit.
+          if [ -f /tmp/ccache.log ]; then
+            echo '## CCache Remote Storage' >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            .github/scripts/ccache_log_filter.sh /tmp/ccache.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: 'Tar build files'
         run: |
@@ -136,7 +175,20 @@ jobs:
             echo "Redis password is missing. Did you forget 'secrets: inherit'?"
             exit 1
           fi
-          CCACHE_REMOTE_STORAGE="redis://${{ vars.REDIS_USER }}:${{ secrets.REDIS_PASSWORD }}@${{ vars.REDIS_HOST }}:${{ vars.REDIS_PORT }}|read-only=${{ vars.REDIS_IS_READONLY }}"
+          # Conditionally set this here so that it remains unset on forks,
+          # otherwise it resolves an invalid URL and the job fails
+          REDIS_USER="${{ vars.REDIS_USER }}"
+          REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}"
+          REDIS_HOST="${{ vars.REDIS_HOST }}"
+          REDIS_PORT="${{ vars.REDIS_PORT }}"
+          # ccache 4.13 bug: read-only is std::optional<bool>; the write gate checks
+          # `if (entry.config.read_only)` which is true whenever the optional HAS a value —
+          # including when that value is false.  Omit the property entirely unless we
+          # actually want read-only mode; ccache's default when absent is writable.
+          CCACHE_REMOTE_STORAGE="redis://${REDIS_USER}:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}"
+          if [ "${{ vars.REDIS_IS_READONLY }}" = "true" ]; then
+            CCACHE_REMOTE_STORAGE="${CCACHE_REMOTE_STORAGE}|read-only=true"
+          fi
           echo "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE}" >> $GITHUB_ENV
           echo "CCACHE_REMOTE_STORAGE: ${CCACHE_REMOTE_STORAGE}"
 
@@ -161,9 +213,13 @@ jobs:
           CIBW_SKIP: "*-musllinux_*"
           CIBW_BUILD_FRONTEND: build
           CIBW_ENVIRONMENT: >-
-            CCACHE_REMOTE_ONLY=true
-            CCACHE_TEMPDIR=/tmp/ccache
+            CCACHE_REMOTE_ONLY="true"
+            CCACHE_TEMPDIR="/tmp/ccache"
             CCACHE_REMOTE_STORAGE="${{ env.CCACHE_REMOTE_STORAGE }}"
+            CCACHE_COMPRESS="true"
+            CCACHE_COMPRESSLEVEL="3"
+            CCACHE_LOGFILE="/tmp/ccache.log"
+            CCACHE_BASEDIR="/work"
             CIBW_ENABLE_TRACY=ON
             CIBW_BUILD_TYPE=Release
           CIBW_BEFORE_BUILD: "mkdir -p /tmp/ccache && ccache -z && ccache -p"
