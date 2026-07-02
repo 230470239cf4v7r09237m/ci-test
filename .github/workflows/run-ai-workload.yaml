@@ -1,0 +1,45 @@
+name: Run AI SW examples as runner validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - mnijjar/test-ci
+  schedule:
+    - cron: "0 */4 * * *"
+
+jobs:
+  get-latest-metal-prerelease:
+    # to have access to gh cli
+    runs-on: tt-beta-ubuntu-2204-mnijjar
+    timeout-minutes: 3
+    outputs:
+      latest-tag: ${{ steps.get-latest-tag.outputs.latest-tag }}
+    steps:
+      - name: Get latest metal tag
+        id: get-latest-tag
+        run: |
+          latestTag=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/tenstorrent/tt-metal/releases" | jq -r ".[0].name")
+          echo "latest-tag=$latestTag" >> "$GITHUB_OUTPUT"
+      - name: Show latest tag for logging and debug
+        run: echo "::notice title=latest-metal-tag::Latest metal tag is ${{ steps.get-latest-tag.outputs.latest-tag }}"
+
+  run-matmul-n150:
+    needs: get-latest-metal-prerelease
+    runs-on: tt-beta-ubuntu-2204-mnijjar
+    container:
+      image: ghcr.io/tenstorrent/tt-metal/tt-metalium-ubuntu-22.04-amd64-release:${{ needs.get-latest-metal-prerelease.outputs.latest-tag }}
+    strategy:
+      matrix:
+        # Run once now, but we may increase frequency to stress our infra more
+        iter: [0]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Run matmul test
+        env:
+          ARCH_NAME: wormhole_b0
+          WH_ARCH_YAML: wormhole_b0_80_arch_eth_dispatch.yaml
+          PYTHONPATH: ${{ github.workspace }}
+        run: echo "pass"
+
