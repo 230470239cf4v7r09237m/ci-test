@@ -11,7 +11,7 @@ on:
       dev_image:
         description: 'Docker image to run the compile in'
         required: false
-        default: 'ghcr.io/tenstorrent/tt-metal/tt-metalium/ubuntu-22.04-dev-amd64:latest'
+        default: 'ghcr.io/tenstorrent/tt-metal/tt-llk-ci-ubuntu-22-04:latest'
         type: string
       pytest_markers:
         description: 'Pytest mark expression (e.g., "quasar", "not perf and not nightly").'
@@ -32,8 +32,8 @@ on:
 jobs:
   compile-quasar:
     name: "🛠️ LLK Compile for Quasar"
-    timeout-minutes: 60
-    runs-on: tt-ubuntu-2204-large-stable
+    timeout-minutes: 80
+    runs-on: tt-ubuntu-2204-xlarge-stable
     environment: ${{ github.ref == 'refs/heads/main' && 'mainline' || '' }}
     container:
       image: ${{ inputs.dev_image }}
