@@ -47,7 +47,7 @@ jobs:
           fetch-depth: 1
 
       - name: 🛠️ Compile LLK for Quasar
-        uses: tenstorrent/tt-metal/.github/actions/llk-compile-quasar@main
+        uses: ./.github/actions/llk-compile-quasar
         with:
           pytest-markers: ${{ inputs.pytest_markers }}
           test-splits: ${{ inputs.test_splits }}
