@@ -1,0 +1,54 @@
+name: "LLK Compile for Quasar"
+
+on:
+  workflow_dispatch:
+    inputs:
+      reference:
+        description: 'Branch name, tag, or commit hash of tt-metal to checkout (default: main)'
+        required: false
+        default: 'main'
+        type: string
+      dev_image:
+        description: 'Docker image to run the compile in'
+        required: false
+        default: 'ghcr.io/tenstorrent/tt-metal/tt-metalium/ubuntu-22.04-dev-amd64:latest'
+        type: string
+      pytest_markers:
+        description: 'Pytest mark expression (e.g., "quasar", "not perf and not nightly").'
+        required: false
+        default: 'quasar'
+        type: string
+      test_splits:
+        description: 'Total number of test groups for sharding.'
+        required: false
+        default: '1'
+        type: string
+      test_group:
+        description: '1-indexed shard to compile (must be <= test_splits).'
+        required: false
+        default: '1'
+        type: string
+
+jobs:
+  compile-quasar:
+    name: "🛠️ LLK Compile for Quasar"
+    timeout-minutes: 60
+    runs-on: tt-ubuntu-2204-large-stable
+    environment: ${{ github.ref == 'refs/heads/main' && 'mainline' || '' }}
+    container:
+      image: ${{ inputs.dev_image }}
+    steps:
+      - name: ⬇️ Checkout tt-metal
+        uses: actions/checkout@v4
+        with:
+          repository: 'tenstorrent/tt-metal'
+          ref: ${{ inputs.reference || 'main' }}
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: 🛠️ Compile LLK for Quasar
+        uses: tenstorrent/tt-metal/.github/actions/llk-compile-quasar@${{ inputs.reference || 'main' }}
+        with:
+          pytest-markers: ${{ inputs.pytest_markers }}
+          test-splits: ${{ inputs.test_splits }}
+          test-group: ${{ inputs.test_group }}
