@@ -12,7 +12,7 @@ jobs:
   # Run ls on an cpu-only runner
   ################################################
   run-ls-cpu-only:
-    runs-on: tt-beta-ubuntu-2204-mnijjar
+    runs-on: tt-beta-ubuntu-2204-small
     strategy:
       matrix:
         version_x: [0,1]
