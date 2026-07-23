@@ -87,6 +87,10 @@ jobs:
           echo "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE}" >> $GITHUB_ENV
           echo "CCACHE_REMOTE_STORAGE: ${CCACHE_REMOTE_STORAGE}"
 
+      - name: 🐿️ Configure cachew git pull-through cache
+        run: |
+          git config --global url."http://cachew.cachew.svc.cluster.local/git/github.com/".insteadOf "https://github.com/"
+
       - name: ⬇️ Checkout
         uses: actions/checkout@v4
         with:
@@ -192,6 +196,10 @@ jobs:
           echo "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE}" >> $GITHUB_ENV
           echo "CCACHE_REMOTE_STORAGE: ${CCACHE_REMOTE_STORAGE}"
 
+      - name: 🐿️ Configure cachew git pull-through cache
+        run: |
+          git config --global url."http://cachew.cachew.svc.cluster.local/git/github.com/".insteadOf "https://github.com/"
+
       - name: ⬇️ Checkout
         uses: actions/checkout@v4
         with:
@@ -294,6 +302,10 @@ jobs:
           ls -la /tmp/ccache/inode-cache-64.v2
           echo "ccache temp directory structure:"
           ls -la /tmp/ccache/
+
+      - name: 🐿️ Configure cachew git pull-through cache
+        run: |
+          git config --global url."http://cachew.cachew.svc.cluster.local/git/github.com/".insteadOf "https://github.com/"
 
       - name: 🧬 Checkout Repository
         uses: actions/checkout@v4
