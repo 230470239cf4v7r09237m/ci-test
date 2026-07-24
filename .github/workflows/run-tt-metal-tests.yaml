@@ -90,6 +90,9 @@ jobs:
       - name: 🐿️ Configure cachew git pull-through cache
         run: |
           git config --global url."http://cachew.cachew.svc.cluster.local/git/github.com/".insteadOf "https://github.com/"
+          git config --global checkout.workers 0
+          git config --global checkout.thresholdForParallelism 50
+          git config --global submodule.fetchJobs 0
 
       - name: ⬇️ Checkout
         uses: actions/checkout@v4
@@ -199,6 +202,9 @@ jobs:
       - name: 🐿️ Configure cachew git pull-through cache
         run: |
           git config --global url."http://cachew.cachew.svc.cluster.local/git/github.com/".insteadOf "https://github.com/"
+          git config --global checkout.workers 0
+          git config --global checkout.thresholdForParallelism 50
+          git config --global submodule.fetchJobs 0
 
       - name: ⬇️ Checkout
         uses: actions/checkout@v4
@@ -306,6 +312,9 @@ jobs:
       - name: 🐿️ Configure cachew git pull-through cache
         run: |
           git config --global url."http://cachew.cachew.svc.cluster.local/git/github.com/".insteadOf "https://github.com/"
+          git config --global checkout.workers 0
+          git config --global checkout.thresholdForParallelism 50
+          git config --global submodule.fetchJobs 0
 
       - name: 🧬 Checkout Repository
         uses: actions/checkout@v4
