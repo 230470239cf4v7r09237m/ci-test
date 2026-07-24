@@ -87,6 +87,14 @@ jobs:
           echo "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE}" >> $GITHUB_ENV
           echo "CCACHE_REMOTE_STORAGE: ${CCACHE_REMOTE_STORAGE}"
 
+      - name: 🐿️ Configure git-cdn git pull-through cache
+        run: |
+            git config --global url."http://git-cdn.git-cdn.svc.cluster.local/".insteadOf "https://github.com/"
+            # git-cdn (grouperenault/git_cdn v1.13.0-oss) only understands git
+            # protocol v1; modern git auto-negotiates v2 over smart HTTP, which
+            # git-cdn cannot serve. Pin the client to v1 explicitly.
+            git config --global protocol.version 1
+
       - name: ⬇️ Checkout
         uses: actions/checkout@v4
         with:
@@ -192,6 +200,14 @@ jobs:
           echo "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE}" >> $GITHUB_ENV
           echo "CCACHE_REMOTE_STORAGE: ${CCACHE_REMOTE_STORAGE}"
 
+      - name: 🐿️ Configure git-cdn git pull-through cache
+        run: |
+          git config --global url."http://git-cdn.git-cdn.svc.cluster.local/".insteadOf "https://github.com/"
+          # git-cdn (grouperenault/git_cdn v1.13.0-oss) only understands git
+          # protocol v1; modern git auto-negotiates v2 over smart HTTP, which
+          # git-cdn cannot serve. Pin the client to v1 explicitly.
+          git config --global protocol.version 1
+
       - name: ⬇️ Checkout
         uses: actions/checkout@v4
         with:
@@ -294,6 +310,14 @@ jobs:
           ls -la /tmp/ccache/inode-cache-64.v2
           echo "ccache temp directory structure:"
           ls -la /tmp/ccache/
+
+      - name: 🐿️ Configure git-cdn git pull-through cache
+        run: |
+            git config --global url."http://git-cdn.git-cdn.svc.cluster.local/".insteadOf "https://github.com/"
+            # git-cdn (grouperenault/git_cdn v1.13.0-oss) only understands git
+            # protocol v1; modern git auto-negotiates v2 over smart HTTP, which
+            # git-cdn cannot serve. Pin the client to v1 explicitly.
+            git config --global protocol.version 1
 
       - name: 🧬 Checkout Repository
         uses: actions/checkout@v4
