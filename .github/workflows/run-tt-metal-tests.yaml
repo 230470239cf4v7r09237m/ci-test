@@ -96,14 +96,15 @@ jobs:
             git config --global protocol.version 1
 
       - name: ⬇️ Checkout
-        uses: actions/checkout@v4
-        with:
-          repository: 'tenstorrent/tt-metal'
-          ref: ${{ inputs.reference || github.ref }}
-          submodules: recursive
-          fetch-depth: 500
-          fetch-tags: true
-          path: docker-job
+        run: |
+              REF="${{ inputs.reference || github.ref }}"
+              mkdir -p docker-job
+              cd docker-job
+              git init -q
+              git remote add origin https://github.com/tenstorrent/tt-metal
+              git -c protocol.version=1 fetch --depth=500 --tags origin "$REF"
+              git -c protocol.version=1 checkout --detach FETCH_HEAD
+              git -c protocol.version=1 submodule update --init --recursive --depth=500
 
       - name: Create ccache tmpdir
         run: mkdir -p /tmp/ccache
@@ -209,13 +210,13 @@ jobs:
           git config --global protocol.version 1
 
       - name: ⬇️ Checkout
-        uses: actions/checkout@v4
-        with:
-          repository: 'tenstorrent/tt-metal'
-          ref: ${{ inputs.reference || github.ref }}
-          submodules: recursive
-          fetch-depth: 500
-          fetch-tags: true
+        run: |
+            REF="${{ inputs.reference || github.ref }}"
+            git init -q
+            git remote add origin https://github.com/tenstorrent/tt-metal
+            git -c protocol.version=1 fetch --depth=500 --tags origin "$REF"
+            git -c protocol.version=1 checkout --detach FETCH_HEAD
+            git -c protocol.version=1 submodule update --init --recursive --depth=500
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v4
@@ -320,12 +321,15 @@ jobs:
             git config --global protocol.version 1
 
       - name: 🧬 Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          repository: 'tenstorrent/tt-metal'
-          ref: ${{ inputs.reference || github.ref }}
-          submodules: recursive
-          path: docker-job
+        run: |
+              REF="${{ inputs.reference || github.ref }}"
+              mkdir -p docker-job
+              cd docker-job
+              git init -q
+              git remote add origin https://github.com/tenstorrent/tt-metal
+              git -c protocol.version=1 fetch --depth=1 origin "$REF"
+              git -c protocol.version=1 checkout --detach FETCH_HEAD
+              git -c protocol.version=1 submodule update --init --recursive --depth=1
 
       - name: 📦 Download Build Artifact
         uses: actions/download-artifact@v4
