@@ -97,14 +97,12 @@ jobs:
 
       - name: ⬇️ Checkout
         run: |
-              REF="${{ inputs.reference || github.ref }}"
-              mkdir -p docker-job
-              cd docker-job
-              git init -q
-              git remote add origin https://github.com/tenstorrent/tt-metal
-              git -c protocol.version=1 fetch --depth=500 --tags origin "$REF"
-              git -c protocol.version=1 checkout --detach FETCH_HEAD
-              git -c protocol.version=1 submodule update --init --recursive --depth=500
+          REF="${{ inputs.reference || github.ref }}"
+          git init -q
+          git remote add origin https://github.com/tenstorrent/tt-metal
+          git -c protocol.version=1 fetch --depth=500 --tags origin "$REF"
+          git -c protocol.version=1 checkout --detach FETCH_HEAD
+          git -c protocol.version=1 submodule update --init --recursive --depth=500
 
       - name: Create ccache tmpdir
         run: mkdir -p /tmp/ccache
@@ -322,14 +320,12 @@ jobs:
 
       - name: 🧬 Checkout Repository
         run: |
-              REF="${{ inputs.reference || github.ref }}"
-              mkdir -p docker-job
-              cd docker-job
-              git init -q
-              git remote add origin https://github.com/tenstorrent/tt-metal
-              git -c protocol.version=1 fetch --depth=1 origin "$REF"
-              git -c protocol.version=1 checkout --detach FETCH_HEAD
-              git -c protocol.version=1 submodule update --init --recursive --depth=1
+          REF="${{ inputs.reference || github.ref }}"
+          git init -q
+          git remote add origin https://github.com/tenstorrent/tt-metal
+          git -c protocol.version=1 fetch --depth=1 origin "$REF"
+          git -c protocol.version=1 checkout --detach FETCH_HEAD
+          git -c protocol.version=1 submodule update --init --recursive --depth=1
 
       - name: 📦 Download Build Artifact
         uses: actions/download-artifact@v4
