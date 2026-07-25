@@ -140,16 +140,6 @@ jobs:
           git config --unset-all http."https://github.com/".extraheader || true
           git config --unset-all http."http://cachew.cachew.svc.cluster.local/".extraheader || true
 
-      #- name: ⬇️ Checkout
-      #  uses: actions/checkout@v4
-      #  with:
-      #    repository: 'tenstorrent/tt-metal'
-      #    ref: ${{ inputs.reference || github.ref }}
-      #    submodules: recursive
-      #    fetch-depth: 500
-      #    fetch-tags: true
-      #    path: docker-job
-
       - name: Create ccache tmpdir
         run: mkdir -p /tmp/ccache
 
@@ -298,15 +288,6 @@ jobs:
           git config --unset-all http."https://github.com/".extraheader || true
           git config --unset-all http."https://cachew.cachew.svc.cluster.local/".extraheader || true
 
-      #- name: ⬇️ Checkout
-      #  uses: actions/checkout@v4
-      #  with:
-      #    repository: 'tenstorrent/tt-metal'
-      #    ref: ${{ inputs.reference || github.ref }}
-      #    submodules: recursive
-      #    fetch-depth: 500
-      #    fetch-tags: true
-
       - name: Set up Python 3.12
         uses: actions/setup-python@v4
         with:
@@ -403,7 +384,7 @@ jobs:
 
       - name: 🐿️ Configure cachew git pull-through cache
         run: |
-          git config --global url."http://cachew.cachew.svc.cluster.local/git/github.com/".insteadOf "https://github.com/"
+          git config --global url."https://cachew.cachew.svc.cluster.local/git/github.com/".insteadOf "https://github.com/"
           git config --global checkout.workers 0
           git config --global checkout.thresholdForParallelism 50
           git config --global submodule.fetchJobs 0
