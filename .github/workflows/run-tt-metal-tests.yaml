@@ -122,7 +122,7 @@ jobs:
           # Fetch exactly the requested ref (branch, tag, SHA, or refs/pull/N/merge
           # all work as a fetch refspec source) — through cachew via the global
           # insteadOf from the previous step.
-          git fetch --filter=blob:none --tags --prune --no-recurse-submodules --depth="${FETCH_DEPTH}" origin "${REF}"
+          git fetch --tags --prune --no-recurse-submodules --depth="${FETCH_DEPTH}" origin "${REF}"
           git checkout --force --detach FETCH_HEAD
 
           # Submodules — this is the part actions/checkout can't do without
@@ -269,7 +269,7 @@ jobs:
           # Fetch exactly the requested ref (branch, tag, SHA, or refs/pull/N/merge
           # all work as a fetch refspec source) — through cachew via the global
           # insteadOf from the previous step.
-          git fetch --filter=blob:none --tags --prune --no-recurse-submodules --depth="${FETCH_DEPTH}" origin "${REF}"
+          git fetch --tags --prune --no-recurse-submodules --depth="${FETCH_DEPTH}" origin "${REF}"
           git checkout --force --detach FETCH_HEAD
 
           # Submodules — this is the part actions/checkout can't do without
