@@ -94,7 +94,7 @@ jobs:
           git config --global checkout.thresholdForParallelism 50
           git config --global submodule.fetchJobs 0
       
-      - name: :arrow_down: Checkout (manual — actions/checkout wipes insteadOf for submodule auth, so we do it ourselves)
+      - name: Checkout (manual actions/checkout wipes insteadOf for submodule auth, so we do it ourselves)
         env:
           REPOSITORY: tenstorrent/tt-metal
           REF: ${{ inputs.reference || github.ref }}
@@ -242,7 +242,7 @@ jobs:
           git config --global checkout.thresholdForParallelism 50
           git config --global submodule.fetchJobs 0
 
-      - name: :arrow_down: Checkout (manual — actions/checkout wipes insteadOf for submodule auth, so we do it ourselves)
+      - name: Checkout (manual actions/checkout wipes insteadOf for submodule auth, so we do it ourselves)
         env:
           REPOSITORY: tenstorrent/tt-metal
           REF: ${{ inputs.reference || github.ref }}
