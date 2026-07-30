@@ -1,0 +1,20 @@
+name: docker-cache-probe
+
+# Measures the cost of the "Initialize containers" step on tt-ubuntu-2204-large-stable.
+# Baseline run = current setup (cold containerd, full image pull). Re-run after the
+# pre-seeded cache is wired in and compare the "Initialize containers" duration.
+on:
+  push:
+    branches: [docker-cache-probe]
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: tt-ubuntu-2204-large-stable
+    container:
+      image: harbor.ci.tenstorrent.net/ghcr.io/tenstorrent/tt-metal/tt-metalium/ubuntu-22.04-ci-test-amd64:latest
+    steps:
+      - name: Confirm we are inside the container
+        run: |
+          echo "container started; the interesting number is the 'Initialize containers' step duration above"
+          cat /etc/os-release
