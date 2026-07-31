@@ -9,6 +9,18 @@ on:
     - cron: "0 15-23 * * 1-5"
 jobs:
   ################################################
+  # Test Open MPI download via restricted proxy
+  ################################################
+  test-open-mpi-allowlist:
+    runs-on: tt-ubuntu-2204-small-stable
+    steps:
+      - name: Fetch Open MPI release via restricted proxy
+        run: |
+          curl -fsSL -o /tmp/openmpi.tgz \
+            https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.10.tar.gz
+          ls -lh /tmp/openmpi.tgz
+
+  ################################################
   # Run ls on an cpu-only runner
   ################################################
   run-ls-cpu-only:
