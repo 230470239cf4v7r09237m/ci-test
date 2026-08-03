@@ -12,8 +12,8 @@ jobs:
   probe:
     runs-on: tt-ubuntu-2204-large-stable
     container:
-      image: ghcr.io/tenstorrent/tt-metal/tt-metalium/ubuntu-22.04-ci-test-amd64:5a32c28bf786d86c5b8336ed314f74cf01359932
-     #image: ghcr.io/tenstorrent/tt-metal/tt-metalium/ubuntu-22.04-ci-test-amd64:latest
+     # image: ghcr.io/tenstorrent/tt-metal/tt-metalium/ubuntu-22.04-ci-test-amd64:5a32c28bf786d86c5b8336ed314f74cf01359932
+     image: ghcr.io/tenstorrent/tt-metal/tt-metalium/ubuntu-22.04-ci-test-amd64:latest
     steps:
       - name: Confirm we are inside the container
         run: |
