@@ -87,15 +87,59 @@ jobs:
           echo "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE}" >> $GITHUB_ENV
           echo "CCACHE_REMOTE_STORAGE: ${CCACHE_REMOTE_STORAGE}"
 
-      - name: ⬇️ Checkout
-        uses: actions/checkout@v4
-        with:
-          repository: 'tenstorrent/tt-metal'
-          ref: ${{ inputs.reference || github.ref }}
-          submodules: recursive
-          fetch-depth: 500
-          fetch-tags: true
-          path: docker-job
+      - name: 🐿️ Configure cachew git pull-through cache
+        run: |
+          git config --global url."https://cachew.cachew.svc.cluster.local/git/github.com/".insteadOf "https://github.com/"
+          git config --global checkout.workers 0
+          git config --global checkout.thresholdForParallelism 50
+          git config --global submodule.fetchJobs 0
+          git config --global gc.auto 0
+      
+      - name: Checkout (manual actions/checkout wipes insteadOf for submodule auth, so we do it ourselves)
+        env:
+          REPOSITORY: tenstorrent/tt-metal
+          REF: ${{ inputs.reference || github.ref }}
+          FETCH_DEPTH: 500
+          GH_TOKEN_B64: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          AUTH_HEADER="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN_B64" | base64 -w0)"
+
+          find . -mindepth 1 -delete
+          git init -q
+
+          # Local (not --global) config, matching actions/checkout's own scoping —
+          # doesn't touch the global insteadOf set in the previous step.
+          # Set the header for BOTH the real and cachew-rewritten host: which one
+          # actually needs it depends on whether git's http.<url>.extraheader
+          # matching happens before or after insteadOf rewriting (genuinely
+          # ambiguous/version-dependent — this covers both cases cheaply).
+          git config http."https://github.com/".extraheader "$AUTH_HEADER"
+          git config http."https://cachew.cachew.svc.cluster.local/".extraheader "$AUTH_HEADER"
+
+          git remote add origin "https://github.com/${REPOSITORY}"
+
+          # Fetch exactly the requested ref (branch, tag, SHA, or refs/pull/N/merge
+          # all work as a fetch refspec source) — through cachew via the global
+          # insteadOf from the previous step.
+          git fetch --no-tags --prune --no-recurse-submodules --depth=1 origin "${REF}"
+          #git fetch --tags --prune --no-recurse-submodules --depth="${FETCH_DEPTH}" origin "${REF}"
+          git checkout --progress --force --detach FETCH_HEAD
+
+          # Submodules — this is the part actions/checkout can't do without
+          # wiping our insteadOf first. Since we never invoked actions/checkout's
+          # submodule path, the global insteadOf from the "Configure cachew" step
+          # is still fully intact here.
+          git submodule sync --recursive
+          git -c http."https://github.com/".extraheader="$AUTH_HEADER" \
+              -c http."https://cachew.cachew.svc.cluster.local/".extraheader="$AUTH_HEADER" \
+              submodule update --init --force --depth=1 --recursive
+
+          # Clean up the token from repo-local git config now that we're done
+          # (mirrors actions/checkout's own "Remove auth token" cleanup step).
+          git config --unset-all http."https://github.com/".extraheader || true
+          git config --unset-all http."https://cachew.cachew.svc.cluster.local/".extraheader || true
 
       - name: Create ccache tmpdir
         run: mkdir -p /tmp/ccache
@@ -192,14 +236,58 @@ jobs:
           echo "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE}" >> $GITHUB_ENV
           echo "CCACHE_REMOTE_STORAGE: ${CCACHE_REMOTE_STORAGE}"
 
-      - name: ⬇️ Checkout
-        uses: actions/checkout@v4
-        with:
-          repository: 'tenstorrent/tt-metal'
-          ref: ${{ inputs.reference || github.ref }}
-          submodules: recursive
-          fetch-depth: 500
-          fetch-tags: true
+      - name: 🐿️ Configure cachew git pull-through cache
+        run: |
+          git config --global url."https://cachew.cachew.svc.cluster.local/git/github.com/".insteadOf "https://github.com/"
+          git config --global checkout.workers 0
+          git config --global checkout.thresholdForParallelism 50
+          git config --global submodule.fetchJobs 0
+          git config --global gc.auto 0
+
+      - name: Checkout (manual actions/checkout wipes insteadOf for submodule auth, so we do it ourselves)
+        env:
+          REPOSITORY: tenstorrent/tt-metal
+          REF: ${{ inputs.reference || github.ref }}
+          FETCH_DEPTH: 500
+          GH_TOKEN_B64: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          AUTH_HEADER="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN_B64" | base64 -w0)"
+
+          find . -mindepth 1 -delete
+          git init -q
+
+          # Local (not --global) config, matching actions/checkout's own scoping —
+          # doesn't touch the global insteadOf set in the previous step.
+          # Set the header for BOTH the real and cachew-rewritten host: which one
+          # actually needs it depends on whether git's http.<url>.extraheader
+          # matching happens before or after insteadOf rewriting (genuinely
+          # ambiguous/version-dependent — this covers both cases cheaply).
+          git config http."https://github.com/".extraheader "$AUTH_HEADER"
+          git config http."https://cachew.cachew.svc.cluster.local/".extraheader "$AUTH_HEADER"
+
+          git remote add origin "https://github.com/${REPOSITORY}"
+
+          # Fetch exactly the requested ref (branch, tag, SHA, or refs/pull/N/merge
+          # all work as a fetch refspec source) — through cachew via the global
+          # insteadOf from the previous step.
+          git fetch --tags --prune --no-recurse-submodules --depth="${FETCH_DEPTH}" origin "${REF}"
+          git checkout --force --detach FETCH_HEAD
+
+          # Submodules — this is the part actions/checkout can't do without
+          # wiping our insteadOf first. Since we never invoked actions/checkout's
+          # submodule path, the global insteadOf from the "Configure cachew" step
+          # is still fully intact here.
+          git submodule sync --recursive
+          git -c http."https://github.com/".extraheader="$AUTH_HEADER" \
+              -c http."https://cachew.cachew.svc.cluster.local/".extraheader="$AUTH_HEADER" \
+              submodule update --init --force --depth=1 --recursive
+
+          # Clean up the token from repo-local git config now that we're done
+          # (mirrors actions/checkout's own "Remove auth token" cleanup step).
+          git config --unset-all http."https://github.com/".extraheader || true
+          git config --unset-all http."https://cachew.cachew.svc.cluster.local/".extraheader || true
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v4
@@ -300,6 +388,13 @@ jobs:
           ls -la /tmp/ccache/inode-cache-64.v2
           echo "ccache temp directory structure:"
           ls -la /tmp/ccache/
+
+      - name: 🐿️ Configure cachew git pull-through cache
+        run: |
+          git config --global url."https://cachew.cachew.svc.cluster.local/git/github.com/".insteadOf "https://github.com/"
+          git config --global checkout.workers 0
+          git config --global checkout.thresholdForParallelism 50
+          git config --global submodule.fetchJobs 0
 
       - name: 🧬 Checkout Repository
         uses: actions/checkout@v4
