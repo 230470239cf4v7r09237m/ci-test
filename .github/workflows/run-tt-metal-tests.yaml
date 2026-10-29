@@ -244,8 +244,14 @@ jobs:
 
   tt-metal-test:
     needs: [build-wheel, build-artifact]
-    name: TT-Metal Tests
-    runs-on: tt-ubuntu-2204-N300-stable
+    name: TT-Metal Tests (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - tt-ubuntu-2204-N300-stable
+          - tt-ubuntu-2204-N300-viommu-stable
+    runs-on: ${{ matrix.runner }}
     environment: ${{ github.ref == 'refs/heads/main' && 'mainline' || '' }}
     container:
       image: ${{ inputs.dev_image }}
