@@ -1,0 +1,49 @@
+name: Test noble N300 runner
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["mchiou/MINFRA-2488-noble-n300-test"]
+
+jobs:
+  noble-n300-host:
+    runs-on: tt-ubuntu-2404-n300-stable
+    timeout-minutes: 30
+    steps:
+      - name: OS and kernel
+        run: |
+          cat /etc/os-release
+          uname -a
+          echo "runner: ${{ runner.name }}"
+      - name: Tenstorrent driver and devices
+        run: |
+          lsmod | grep -E '^tenstorrent'
+          cat /sys/module/tenstorrent/version
+          ls -l /dev/tenstorrent
+          ls -ld /dev/hugepages-1G
+      - name: tt-smi
+        run: |
+          tt-smi -v
+          tt-smi -ls
+      - name: Python and Docker
+        run: |
+          python3 --version
+          docker version
+          docker info --format '{{.ServerVersion}} {{.Driver}} {{.CgroupVersion}}'
+
+  noble-n300-container:
+    runs-on: tt-ubuntu-2404-n300-stable
+    needs: noble-n300-host
+    timeout-minutes: 30
+    container:
+      image: ghcr.io/tenstorrent/tt-metal/tt-metalium/ubuntu-24.04-ci-test-amd64:latest
+      options: >-
+        --device /dev/tenstorrent
+        -v /dev/hugepages-1G:/dev/hugepages-1G
+    steps:
+      - name: Card from the job container
+        run: |
+          cat /etc/os-release
+          ls -l /dev/tenstorrent
+          ls -ld /dev/hugepages-1G
+          python3 --version
