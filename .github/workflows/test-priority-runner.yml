@@ -19,6 +19,16 @@ jobs:
     steps:
       - run: echo "CPU priority large job picked up on ${{ runner.name }}"
 
+  cpu-priority-xlarge:
+    if: github.event_name == 'merge_group'
+    runs-on: tt-ubuntu-2204-xlarge-prio-stable
+    steps:
+      - run: |
+          echo "CPU priority xlarge job picked up on ${{ runner.name }}"
+          nproc
+          free -g
+          df -h /
+
   n300-regular:
     if: github.event_name != 'merge_group'
     runs-on: tt-ubuntu-2204-n300-viommu-stable
@@ -46,12 +56,19 @@ jobs:
     needs:
       - cpu-regular-large
       - cpu-priority-large
+      - cpu-priority-xlarge
     runs-on: ubuntu-latest
     steps:
       - name: Require CPU priority runner on merge queue
         if: github.event_name == 'merge_group' && needs.cpu-priority-large.result != 'success'
         run: |
           echo "Expected cpu-priority-large to succeed on merge_group, got: ${{ needs.cpu-priority-large.result }}"
+          exit 1
+
+      - name: Require CPU priority xlarge runner on merge queue
+        if: github.event_name == 'merge_group' && needs.cpu-priority-xlarge.result != 'success'
+        run: |
+          echo "Expected cpu-priority-xlarge to succeed on merge_group, got: ${{ needs.cpu-priority-xlarge.result }}"
           exit 1
 
       - name: Require CPU regular runner on pull request
